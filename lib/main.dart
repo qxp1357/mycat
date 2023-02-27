@@ -3,10 +3,9 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 //2.8(수) 각 타일 이동기능 완료, 시작 시 원본 리스트랑 서로 만들어서 비교기능 추가해야함 <- 2.17(금) 완료 여부 검사기 완료
-//2.17(금) 이미지 잘라야되는데 내장 API 없어서 다른거 찾아야됨 아오 킹받음
-//처음 이미지 원본 가져옴 더 로딩할 필요 없게
-// final originImg = Image.asset('assets/image/cat_1.jpg');
-// final originImgByteData = originImg.image.toByteData();
+//2.17(금) 이미지 잘라야되는데 내장 API 없어서 다른거 찾아야됨 아오 킹받음 <- 2.27(월) Image.assets 쓰려면 이미지 파일 별도로 나눠야해서 따로 조각냄
+//2.27(월) 이미지 별도로 조각내서 assets에 추가함 각 셀별로 src 할당완료 이동시 cell 따라서 이미지 출력까지 확인함,
+//        Cell 별 index 구분해서 완료되도록 하는 로직 구현해야함
 
 
 
@@ -30,7 +29,7 @@ List makePuzzleList (int idx) {
     if(i == idx){
       res.add(Cell('empty', true,i));
     }else{
-      res.add(Cell('assets/image/cat_1.jpg', false,i));
+      res.add(Cell('assets/image/${i+1}.jpg', false,i));
     }
   }
   return res;
@@ -153,7 +152,8 @@ class _MyAppState extends State<MyApp> {
                 color: index%2 == 1 ? Colors.blue : Colors.yellow,
                 // child: Center(child:Text("${index}")),
                 // child: Center(child: Text("${A[index].originIndex}\n ${A[index].isEmpty.toString()}"))
-                child: A[index].isEmpty ? Center(child: Text("${A[index].src}")):Image.asset('assets/image/cat_1.jpg',fit: BoxFit.fill),
+                // child: A[index].isEmpty ? Center(child: Text("${A[index].src}")):Image.asset('assets/image/${index+1}.jpg',fit: BoxFit.fill ),
+                  child: A[index].isEmpty ? Center(child: Text("${A[index].src}")):Image.asset(A[index].src,fit: BoxFit.fill ),
           ));
           })
           ,),
@@ -164,7 +164,7 @@ class _MyAppState extends State<MyApp> {
               child: Center(
                 child: Row(
                   children: [
-                    Text(Image.asset('assets/image/cat_1.jpg',fit: BoxFit.fill).toString()),
+                    // Text(Image.asset('assets/image/cat_1.jpg',fit: BoxFit.fill).toString()),
                     Center(child: Text(Complete ? "같다": "다르다", style: TextStyle(fontSize: 30),))
                   ],
                 ),
