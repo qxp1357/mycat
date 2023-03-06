@@ -7,15 +7,19 @@ import 'package:flutter/material.dart';
 //2.27(월) 이미지 별도로 조각내서 assets에 추가함 각 셀별로 src 할당완료 이동시 cell 따라서 이미지 출력까지 확인함,
 //        Cell 별 index 구분해서 완료되도록 하는 로직 구현해야함 <- 3.3(금) 로직 구현 완료
 //3.3(금) 완료 로직 구성완료, 게임 진행 플로우 수정 중  시작 -> 완료 -> 재시작 혹은 종료
-
+//        프로토타입 테스트 결과 => 조작감이 너무 어렵다. 직관적이지 못한 듯
+//        GestureDetector 알아보는 중 -> inkWell 대체해야 될 수 있음
+//3.6(월) 슬라이딩 구현은 했고 조건도 기초는 만들어 놨는데 이미지가 안들어간다. 수정 필요함
 
 //한칸용 클래스
 class Cell {
   String src;
   bool isEmpty;
   int originIndex;
+  double xOffset;
+  double yOffset;
 
-  Cell(this.src, this.isEmpty, this.originIndex);
+  Cell(this.src, this.isEmpty, this.originIndex, this.xOffset, this.yOffset);
 }
 
 // 4*4 퍼즐칸용 배열을 반환하는 만드는 함수
@@ -26,9 +30,9 @@ List makePuzzleList(int idx) {
 
   for (int i = 0; i < 16; i++) {
     if (i == idx) {
-      res.add(Cell('empty', true, i));
+      res.add(Cell('empty', true, i, 0.0, 0.0));
     } else {
-      res.add(Cell('assets/image/${i + 1}.jpg', false, i));
+      res.add(Cell('assets/image/${i + 1}.jpg', false, i, 0.0, 0.0));
     }
   }
   return res;
@@ -88,9 +92,12 @@ class _MyAppState extends State<MyApp> {
   List B = makePuzzleList(emptyIndex);
 
   bool startFlag = false;
+  Offset position = Offset.zero;
+
+  double _xOffset = 0.0;
+  double _yOffset = 0.0;
 
   void startGame() {
-
     setState(() {
       startFlag = true;
     });
@@ -142,7 +149,7 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
-  void reGame(){
+  void reGame() {
     setState(() {
       startFlag = false;
       A = B;
@@ -166,7 +173,33 @@ class _MyAppState extends State<MyApp> {
                 icon: Icon(Icons.exit_to_app))
           ],
         ),
-        body: Container(
+        // body: GestureDetector(
+        //     onHorizontalDragUpdate: (DragUpdateDetails details) {
+        //       setState(() {
+        //         _xOffset += details.delta.dx;
+        //       });
+        //     },
+        //     onVerticalDragUpdate: (DragUpdateDetails details) {
+        //       setState(() {
+        //         _yOffset += details.delta.dy;
+        //       });
+        //     },
+        //     child: Container(
+        //       alignment: Alignment.topLeft,
+        //       child: Stack(
+        //         children: [
+        //           Positioned(
+        //               left: _xOffset,
+        //               top: _yOffset,
+        //               child: Container(
+        //                 width: 300,
+        //                 height: 300,
+        //                 color: Colors.blue,
+        //               ))
+        //         ],
+        //       ),
+        //     )),
+        body:Container(
           child: GridView.count(
             crossAxisCount: 4,
             padding: EdgeInsets.all(3.0),
@@ -174,17 +207,81 @@ class _MyAppState extends State<MyApp> {
             mainAxisSpacing: 1,
             crossAxisSpacing: 1,
             children: List.generate(A.length, (index) {
-              return InkWell(
-                  onTap: () {
+              return GestureDetector(
+                // onTapDown: (details){
+                //   setState(() {
+                //     position = details.localPosition;
+                //   });
+                // },
+
+                onPanUpdate: (details) {
+                  bool isUp = index < 4 ? false : true;
+                  bool isDown = index > 11 ? false : true;
+                  bool isRight = (index + 1) % 4 == 0 ? false : true;
+                  bool isLeft = index % 4 == 0 ? false : true;
+
+                  setState(() {
+
+                    final dx = details.delta.dx;
+                    final dy = details.delta.dy;
+                    // print("detail${details.localPosition}");
+                    print("detailA[index].yOffset${A[index].yOffset}");
+                    if(isDown && A[index].yOffset >= 0 ){
+                      A[index].yOffset += dy;
+                    }else{
+                      A[index].yOffset = 0;
+                    }
+
+
+                    // if (dx.abs() > dy.abs()) {
+                    //   A[index].xOffset += dx;
+                    // } else {
+                    //   A[index].yOffset += dy;
+                    // }
+                  });
+                },
+                onPanEnd: (details) {
+                  setState(() {
+
+                    A[index].xOffset = 0;
+                    A[index].yOffset = 0;
                     swapCell(A, index);
-                  },
-                  child: Container(
-                    color: index % 2 == 1 ? Colors.blue : Colors.yellow,
-                    child: A[index].isEmpty
-                        ? Center(child: Text("${A[index].src}"))
-                        : Image.asset(A[index].src, fit: BoxFit.fill),
-                  ));
+                    // position = Offset.zero;
+                  });
+                },
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Positioned(
+                        left: A[index].xOffset,
+                        top: A[index].yOffset,
+                        child: Container(
+                          color: index % 2 == 1 ? Colors.blue : Colors.yellow,
+                          // alignment: Alignment.center,
+                          child: A[index].isEmpty
+                              ? Center(child: Text("${A[index].src}"))
+                              : Image.asset(
+                                  A[index].src,
+                                  fit: BoxFit.fill,
+                            width: 150,
+                            height: 150,
+                                ),
+                        ))
+                  ],
+                ),
+              );
+              // return InkWell(
+              //     onTap: () {
+              //       swapCell(A, index);
+              //     },
+              //     child: Container(
+              //       color: index % 2 == 1 ? Colors.blue : Colors.yellow,
+              //       child: A[index].isEmpty
+              //           ? Center(child: Text("${A[index].src}"))
+              //           : Image.asset(A[index].src, fit: BoxFit.fill),
+              //     ));
             }),
+
           ),
         ),
         bottomNavigationBar: BottomAppBar(
@@ -207,24 +304,28 @@ class _MyAppState extends State<MyApp> {
                           ),
                           onPressed: shuffleA,
                           child: Text("다시 섞기")),
-                    checkComplete(B, A) && startFlag ? AlertDialog(
-                      title: Text("퍼즐을 모두 맞췄습니다."),
-                      content: Text("퍼즐을 다시 시작하시겠습니까?"),
-                      actions: [
-                        TextButton(onPressed: ()=>{
-                          Navigator.of(context).pop()
-                        }, child: Text("그만하기")),
-                        TextButton(onPressed: ()=>{
-                        reGame()
-                        }, child: Text("또 하기")),
-                      ],
-                    ) : Text("맞추는 중.."),
+                    checkComplete(B, A) && startFlag
+                        ? AlertDialog(
+                            title: Text("퍼즐을 모두 맞췄습니다."),
+                            content: Text("퍼즐을 다시 시작하시겠습니까?"),
+                            actions: [
+                              TextButton(
+                                  onPressed: () =>
+                                      {Navigator.of(context).pop()},
+                                  child: Text("그만하기")),
+                              TextButton(
+                                  onPressed: () => {reGame()},
+                                  child: Text("또 하기")),
+                            ],
+                          )
+                        : Text("맞추는 중.."),
                     // Text(
                     //   checkComplete(B, A) && startFlag ? "같다" : "다르다",
                     //   style: TextStyle(fontSize: 30),
                     // ),
 
                     // IconButton(onPressed: ()=> shuffleList(A), icon: Icon(Icons.refresh)),
+
                     Container(
                       decoration: BoxDecoration(
                           border: Border.all(
